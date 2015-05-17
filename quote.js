@@ -1,5 +1,10 @@
 // use the express middleware
-var express = require('express');
+var express = require('express'),
+    pg = require('pg').native,
+    connectionString = process.env.DATABASE_URL,
+    start = new Date(),
+    port = process.env.PORT,
+    client;
 
 // make express handle JSON and other requests
 var bodyParser = require('body-parser');
@@ -9,6 +14,9 @@ var cors = require('cors');
 
 // instantiate app
 var app = express();
+
+client = new pg.Client(connectionString);
+client.connect();
 
 var quotes = [
   { author : 'Audrey Hepburn', text : "Nothing is impossible, the word itself says 'I'm possible'!"},

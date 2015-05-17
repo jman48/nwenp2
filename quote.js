@@ -35,13 +35,33 @@ app.get('/quote/random', function(req, res) {
 });
 
 app.get('/quote/:id', function(req, res) {
-  if(quotes.length <= req.params.id || req.params.id < 0) {
-    res.statusCode = 404;
-    return res.send('Error 404: No quote found');
-  }
 
-  var q = quotes[req.params.id];
-  res.send(q);
+    if(!req.params.hasOwnProperty('id')) {
+        res.statusCode = 400;
+        return res.send('Error 400: Post syntax incorrect.');
+    } else if(req.id < 0) {
+        res.statusCode = 404;
+        return res.send('Error 404: No quote found');
+    }
+
+  client.connect();
+  var query = client.query('SELECT * FROM quotes WHERE quote_id = $1', [req.params.id]);
+    
+    query.on('end', function (result) {
+        if (result.rows.length <= 0) {
+            res.statusCode = 404;
+            return res.send('Error 404: No quote found');
+        }
+        
+        res.send(result.rows[0]);
+    });  
+    
+    query.on('error', function(error) {
+            client.end();
+            //No idea what happened so return 500
+            res.statusCode = 500;
+            res.send('Error: ' + JSON.stringify(error));
+        });
 });
 
 app.post('/quote', function(req, res) {

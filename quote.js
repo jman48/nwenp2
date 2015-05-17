@@ -39,9 +39,12 @@ app.get('/quote/:id', function(req, res) {
     if(!req.params.hasOwnProperty('id')) {
         res.statusCode = 400;
         return res.send('Error 400: Post syntax incorrect.');
-    } else if(req.id < 0) {
+    } else if(req.params.id < 0) {
         res.statusCode = 404;
         return res.send('Error 404: No quote found');
+    } else if (isNaN(+req.params.id)) {
+        res.statusCode = 422; //We understand the request and what they are trying to do but we will not try and process it
+        return res.send("Error 422: id must be of type number");
     }
 
   client.connect();
@@ -90,6 +93,7 @@ app.post('/quote', function(req, res) {
         
         query2.on('end', function(result) {
             client.end();
+            res.statusCode = 201;
             res.send('Created a new quote with id ' + id);
         });
 

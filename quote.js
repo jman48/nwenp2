@@ -1,10 +1,12 @@
 // use the express middleware
 var express = require('express'),
     pg = require('pg').native,
-    connectionString = process.env.DATABASE_URL,
+    connectionString = 'postgres://ecnbtqsyugvdxf:dxUfMx9EGB1n35Wrw30aplM7ml@ec2-107-20-152-139.compute-1.amazonaws.com:5432/d5ocpahj31f72f',
     start = new Date(),
     port = process.env.PORT,
     client;
+
+console.log('Connection url: ' + connectionString);
 
 // make express handle JSON and other requests
 var bodyParser = require('body-parser');
@@ -17,13 +19,6 @@ var app = express();
 
 client = new pg.Client(connectionString);
 client.connect();
-
-var quotes = [
-  { author : 'Audrey Hepburn', text : "Nothing is impossible, the word itself says 'I'm possible'!"},
-  { author : 'Walt Disney', text : "You may not realize it when it happens, but a kick in the teeth may be the best thing in the world for you"},
-  { author : 'Unknown', text : "Even the greatest was once a beginner. Don’t be afraid to take that first step."},
-  { author : 'Neale Donald Walsch', text : "You are afraid to die, and you’re afraid to live. What a way to exist."}
-];
 
 // make sure we can parse JSON
 app.use(bodyParser.json());
@@ -54,18 +49,36 @@ app.post('/quote', function(req, res) {
   if(!req.body.hasOwnProperty('author') || !req.body.hasOwnProperty('text')) {
     res.statusCode = 400;
     return res.send('Error 400: Post syntax incorrect.');
-  }
+  }    
+    client.connect();
+    var query = client.query('SELECT MAX(quote_id) FROM quotes');
 
-  var newQuote = {
-    author : req.body.author,
-    text : req.body.text
-  };
+    query.on('error', function(error) {
+        client.end();
+        res.statusCode = 500;
+        res.send('Error: ' + error);
+    });
 
-  quotes.push(newQuote);
-  // should send back the location at this point
-  console.log("Added!");
-  newQuote.pos = quotes.length-1;
-  res.send(newQuote);
+    query.on('end', function (result) {
+        console.log(JSON.stringify(result));
+        //Create the new id based on the highest id from database
+        var id = (+result.rows[0].max) + 1;
+        
+        client.connect();
+        
+        var query2 = client.query('INSERT INTO quotes(quote_id, author, text) VALUES($1, $2, $3)', [id, req.body.author, req.body.text]);
+        
+        query2.on('end', function(result) {
+            client.end();
+            res.send('Created a new quote with id ' + id);
+        });
+
+        query2.on('error', function(error) {
+            client.end();
+            res.statusCode = 500;
+            res.send('Error: ' + JSON.stringify(error));
+        });
+    });
 });
 
 app.delete('/quote/:id', function(req, res) {

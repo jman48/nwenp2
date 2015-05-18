@@ -1,7 +1,7 @@
 // use the express middleware
 var express = require('express'),
     pg = require('pg').native,
-    connectionString = process.env.DATABASE_URL;// 'postgres://ecnbtqsyugvdxf:dxUfMx9EGB1n35Wrw30aplM7ml@ec2-107-20-152-139.compute-1.amazonaws.com:5432/d5ocpahj31f72f',
+    connectionString =  'postgres://ecnbtqsyugvdxf:dxUfMx9EGB1n35Wrw30aplM7ml@ec2-107-20-152-139.compute-1.amazonaws.com:5432/d5ocpahj31f72f',
     port = process.env.PORT,
     client;
 
@@ -125,7 +125,7 @@ var server = app.listen(process.env.PORT, function() {
 /**
  * Handle a postgressql query error
  */
-handleError(errQuery, errClient) {
+function handleError(errQuery, errClient) {
     errQuery.on('error', function(error) {
         errClient.end();
         res.statusCode = 500;

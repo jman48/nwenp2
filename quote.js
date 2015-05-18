@@ -32,7 +32,7 @@ app.get('/quote/all', function(req, res) {
         res.send(result.rows);
     });
     
-    handleError(query, client);
+    handleError(query, client, res);
 });
 
 //Get a random quote from the database.
@@ -49,7 +49,7 @@ app.get('/quote/random', function(req, res) {
         res.send(result.rows[rand]);
     });
     
-    handleError(query, client);
+    handleError(query, client, res);
 });
 
 //Get a quote from the database based on the id passed
@@ -69,11 +69,12 @@ app.get('/quote/:id', function(req, res) {
         res.send(result.rows[0]);
     });
     
-    handleError(query, client);
+    handleError(query, client, res);
 });
 
 //Create a new quote in the database
 app.post('/quote', function(req, res) {
+    
     //Check that the required data was submitted
     if(!req.body.hasOwnProperty('author') || !req.body.hasOwnProperty('text')) {
         res.statusCode = 400;
@@ -82,28 +83,48 @@ app.post('/quote', function(req, res) {
         //We understand the request and what they are trying to do but we will not try and process it because it is in the wrong format
         res.statusCode = 422;
         return res.send("Error 422: Quote text is required");
-    }
+    } 
+//     if(req.body.author == '') {
+//         //We have to make the author required because if it is empty postgresql will throw an error with the parameterized query
+//         res.statusCode = 422;
+//         return res.send("Error 422: Author is required");
+//     }
     
+    //First check that the author does not already have a quote saved
     client.connect();
-    var query = client.query('SELECT MAX(quote_id) FROM quotes');
+    var query = client.query('SELECT COUNT(*) AS count FROM quotes WHERE author = $1', [req.body.author]);
     
-    handleError(query, client);
+    handleError(query, client, res);
     
     query.on('end', function(result) {
-        //Create the new id based on the highest id from database
-        var id = (+result.rows[0].max) + 1;
+        if(result.rows[0].count > 0) {
+            res.statusCode = 409;
+            return res.send('Error 409: The author already has a quote')
+        }
         
         client.connect();
-        var insertQuery = client.query('INSERT INTO quotes(quote_id, author, text) VALUES($1, $2, $3)', [id, req.body.author, req.body.text]);
+        var query = client.query('SELECT MAX(quote_id) FROM quotes');
+    
+        handleError(query, client, res);
+    
+        query.on('end', function(result) {
+            //Create the new id based on the highest id from database
+            var id = (+result.rows[0].max) + 1;
         
-        insertQuery.on('end', function(result) {
-            client.end();
-            res.statusCode = 201;
-            res.send('Created a new quote with id ' + id);
+            client.connect();
+            var insertQuery = client.query('INSERT INTO quotes(quote_id, author, text) VALUES($1, $2, $3)', [id,            req.body.author, req.body.text]);
+        
+            insertQuery.on('end', function(result) {
+                client.end();
+                res.statusCode = 201;
+                res.send('Created a new quote with id ' + id);
+            });
+        
+            handleError(insertQuery, client, res);
         });
-        
-        handleError(insertQuery, client);
-    });
+    })
+    
+    
 });
 
 //Delete a quote from the database
@@ -121,7 +142,7 @@ app.delete('/quote/:id', function(req, res) {
         res.json(true);
     });
     
-    handleError(query, client);
+    handleError(query, client, res);
 });
 
 // use PORT set as an environment variable
@@ -132,7 +153,7 @@ var server = app.listen(process.env.PORT, function() {
 /**
  * Handle a postgressql query error
  */
-function handleError(errQuery, errClient) {
+function handleError(errQuery, errClient, res) {
     errQuery.on('error', function(error) {
         errClient.end();
         res.statusCode = 500;
@@ -148,12 +169,16 @@ function handleError(errQuery, errClient) {
  */
 function sanitize(params, res, dbClient) {
     if(!params.hasOwnProperty('id')) {
+        client.end();
         res.statusCode = 400;
         return res.send('Error 400: Post syntax incorrect.');
     } else if(params.id < 0) {
+        client.end();
         res.statusCode = 404;
         return res.send('Error 404: No quote found');
     } else if(isNaN(+params.id)) {
+        client.end();
+        
         //We understand the request and what they are trying to do but we will not try and process it because it is in the wrong format
         res.statusCode = 422;
         return res.send("Error 422: id must be of type number");

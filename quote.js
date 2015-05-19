@@ -3,7 +3,9 @@ var express = require('express'),
     pg = require('pg').native,
     connectionString = 'postgres://ecnbtqsyugvdxf:dxUfMx9EGB1n35Wrw30aplM7ml@ec2-107-20-152-139.compute-1.amazonaws.com:5432/d5ocpahj31f72f',
     port = process.env.PORT,
-    client;
+    client,
+    password = require('password-hash-and-salt')
+;
 // make express handle JSON and other requests
 var bodyParser = require('body-parser');
 // use cross origin resource sharing
@@ -16,6 +18,7 @@ app.use(bodyParser.json());
 app.use(express.static(__dirname));
 // make sure we use CORS to avoid cross domain problems
 app.use(cors());
+
 client = new pg.Client(connectionString);
 client.connect();
 
@@ -30,20 +33,39 @@ app.post('/login', function(req, res) {
         //TODO Should not allow a user name that is empty
     }
     
-    client.connect();
-    var query = client.query('SELECT COUNT(*) AS count FROM quotes WHERE user_name = $1 AND password = $2', [req.body.user, req.body.password]);
+    var user = [];
     
-    query.on('end', function(result) {
-       if(result.rows[0].count === 1) {
-           res.statusCode = 200;
-           res.send('Login was successful');
-       } else {
-           res.statusCode = 401;
-           res.send('Error 401: Login failed');
+    var hash = password(req.body.password).hash(function(error, hash) {
+       if(error) {
+           //TODO handle error
        }
-    });
-    
-    
+        
+        user.hash = hash;
+        
+        client.connect();
+        var query = client.query('SELECT password FROM user WHERE user_name = $1', [req.body.user]);
+
+        query.on('end', function(result) {
+           if(result.rows[0].count === 1) {
+               password(req.body.password).verifyAgainst(user.hash, function(error, verified) {
+                   if(error) {
+                       //TODO handle error
+                   }
+                   if(!verified) {
+                       res.statusCode = 401;
+                       res.send('Error 401: Login failed');
+                   } else {
+                       res.statusCode = 200;
+                       res.send('Login was successful');
+                   }
+               });               
+           } else {
+               //If we can not find the user then login failed
+               res.statusCode = 404;
+               res.send('Error 404: User not found');
+           }
+        });       
+    });    
 });
 
 //Get all quotes from the database

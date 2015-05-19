@@ -43,7 +43,7 @@ app.post('/login', function(req, res) {
         user.hash = hash;
         
         client.connect();
-        var query = client.query('SELECT password FROM user WHERE user_name = $1', [req.body.user]);
+        var query = client.query('SELECT password FROM users WHERE user_name = $1', [req.body.user]);
 
         query.on('end', function(result) {
            if(result.rows[0].count === 1) {

@@ -1,5 +1,5 @@
 var pg = require('pg').native,
-    connectionString = 'postgres://ecnbtqsyugvdxf:dxUfMx9EGB1n35Wrw30aplM7ml@ec2-107-20-152-139.compute-1.amazonaws.com:5432/d5ocpahj31f72f',
+    connectionString = process.env.DATABASE_URL,
     client, 
     query,
     hashPass = require('password-hash-and-salt');

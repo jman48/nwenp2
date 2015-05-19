@@ -1,5 +1,5 @@
 var pg = require('pg').native,
-    connectionString = 'postgres://ecnbtqsyugvdxf:dxUfMx9EGB1n35Wrw30aplM7ml@ec2-107-20-152-139.compute-1.amazonaws.com:5432/d5ocpahj31f72f',
+    connectionString = process.env.DATABASE_URL,
     client, 
     query,
     hashPass = require('password-hash-and-salt');
@@ -18,15 +18,13 @@ drop.on('error', function(error) {
 query = client.query('CREATE TABLE users (user_name VARCHAR(50), password VARCHAR(3000))');
 
 query.on('end', function(result) {
-     createUser('User1', '1234', function () {
-         createUser('User2', 'password', function() {
+     createUser('User1', '1234', function(){});
+    createUser('User2', 'password', function() {
              client.end();
          });
-     });
 });
 
 function createUser(userName, password, callback) {
-    client.connect();
     hashPass('1234').hash(function(error, hash) {
         var insertquery = client.query('INSERT INTO users(user_name, password) VALUES($1, $2)', [userName, 'test']);
         insertquery.on('end', function(result) {

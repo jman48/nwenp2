@@ -4,8 +4,8 @@ var express = require('express'),
     connectionString = 'postgres://ecnbtqsyugvdxf:dxUfMx9EGB1n35Wrw30aplM7ml@ec2-107-20-152-139.compute-1.amazonaws.com:5432/d5ocpahj31f72f',
     port = process.env.PORT,
     client,
-    password = require('password-hash-and-salt')
-;
+    password = require('password-hash-and-salt');
+
 // make express handle JSON and other requests
 var bodyParser = require('body-parser');
 // use cross origin resource sharing

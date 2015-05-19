@@ -30,8 +30,20 @@ app.post('/login', function(req, res) {
         //TODO Should not allow a user name that is empty
     }
     
-    res.statusCode = 200;
-    res.send('Login was successful');
+    client.connect();
+    var query = client.query('SELECT COUNT(*) AS count FROM quotes WHERE user_name = $1 AND password = $2', [req.body.user, req.body.password]);
+    
+    query.on('end', function(result) {
+       if(result.rows[0].count === 1) {
+           res.statusCode = 200;
+           res.send('Login was successful');
+       } else {
+           res.statusCode = 401;
+           res.send('Error 401: Login failed');
+       }
+    });
+    
+    
 });
 
 //Get all quotes from the database

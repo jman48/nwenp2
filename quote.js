@@ -161,7 +161,7 @@ app.post('/quote', function(req, res) {
             var id = (+result.rows[0].max) + 1;
         
             client.connect();
-            var insertQuery = client.query('INSERT INTO quotes(quote_id, author, text) VALUES($1, $2, $3)', [id,            req.body.author, req.body.text]);
+            var insertQuery = client.query('INSERT INTO quotes(quote_id, author, text) VALUES($1, $2, $3)', [id, req.body.author, req.body.text]);
         
             insertQuery.on('end', function(result) {
                 client.end();

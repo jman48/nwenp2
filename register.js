@@ -7,14 +7,23 @@ var pg = require('pg').native,
 client = new pg.Client(connectionString);
 client.connect();
 
-client.query('DROP TABLE IF EXISTS user_obj');
+var drop = client.query('DROP TABLE userobj');
+
+drop.on('error', function(error) {
+    console.log('Error: ' + JSON.stringify(error));
+});
 
 //Create a new quotes table
-query = client.query('CREATE TABLE user_obj (user_name VARCHAR(50) UNIQUE NOT NULL, password VARCHAR(255) UNIQUE NOT NULL)');
+query = client.query('CREATE TABLE userobj (user_name VARCHAR(50) UNIQUE NOT NULL, password VARCHAR(255) UNIQUE NOT NULL)');
 
 query.on('end', function(result) {
     client.connect();
-    client.query('INSERT INTO user_obj(user_name, password) VALUES($1, $2)', 'User1', 'hash');
+    var query2 = client.query('INSERT INTO userobj(user_name, password) VALUES($1, $2)', ['User1', 'hash']);
+    //ertQuery = client.query('INSERT INTO quotes(quote_id, author, text) VALUES($1, $2, $3)', [id, req.body.author, req.body.text]);
+    
+//     query2.on('error', function(error) {
+//         console.log('Error 2: ' + JSON.stringify(error));
+//     });
 //     hashPass('1234').hash(function(error, hash) {
 //         client.query('INSERT INTO user_obj(user_name, password) VALUES($1, $2)', 'User1', hash);
 //     });    
@@ -26,12 +35,6 @@ query.on('end', function(result) {
     client.end();
 });
 
-function createUser(userName, password) {
-    client.connect();
-    hashPass(password).hash(function(error, hash) {
-        var insertUser = client.query('INSERT INTO user_obj(user_name, password) VALUES($1, $2)', userName, hash);
-        insertUser.on('end', function(result) {
-            client.end();     
-        })
-    });
-}
+query.on('error', function(error) {
+    console.log('Error 3: ' + JSON.stringify(error));
+});

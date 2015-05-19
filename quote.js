@@ -19,6 +19,21 @@ app.use(cors());
 client = new pg.Client(connectionString);
 client.connect();
 
+
+app.post('/login', function(req, res) {
+    if(!req.body.hasOwnProperty('user') || !req.body.hasOwnProperty('password')) {
+        res.statusCode = 400;
+        return res.send('Error 400: Post syntax incorrect.');
+    } else if(req.body.password === '') {
+        //TODO Should not allow a user password that is empty
+    } else if (req.body.user === '') {
+        //TODO Should not allow a user name that is empty
+    }
+    
+    res.statusCode = 200;
+    res.send('Login was successful');
+});
+
 //Get all quotes from the database
 app.get('/quote/all', function(req, res) {
     client.connect();

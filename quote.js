@@ -1,7 +1,7 @@
 // use the express middleware
 var express = require('express'),
     pg = require('pg').native,
-    connectionString = 'postgres://ecnbtqsyugvdxf:dxUfMx9EGB1n35Wrw30aplM7ml@ec2-107-20-152-139.compute-1.amazonaws.com:5432/d5ocpahj31f72f',
+    connectionString = process.env.DATABASE_URL,
     port = process.env.PORT,
     client,
     password = require('password-hash-and-salt');
@@ -28,16 +28,21 @@ app.post('/login', function(req, res) {
         res.statusCode = 400;
         return res.send('Error 400: Post syntax incorrect.');
     } else if(req.body.password === '') {
-        //TODO Should not allow a user password that is empty
+        //Should not allow a user password that is empty
+        res.statusCode = 400;
+        return res.send('Error 400: Password is empty.');
     } else if (req.body.user === '') {
-        //TODO Should not allow a user name that is empty
+        //Should not allow a user name that is empty
+        res.statusCode = 400;
+        return res.send('Error 400: Username is empty.');
     }
     
     var user = [];
     
     var hash = password(req.body.password).hash(function(error, hash) {
        if(error) {
-           //TODO handle error
+           res.statusCode = 500;
+           return res.send('Error 500: An internal servor error has occured.');
        }
         
         user.hash = hash;
@@ -46,10 +51,15 @@ app.post('/login', function(req, res) {
         var query = client.query('SELECT password FROM users WHERE user_name = $1', [req.body.user]);
 
         query.on('end', function(result) {
-           if(result.rows[0].count === 1) {
-               password(req.body.password).verifyAgainst(user.hash, function(error, verified) {
+            console.log(JSON.stringify(result));
+           if(result.rows.length === 1) {
+               console.log('Password: ' + req.body.password)
+               console.log('Hash: ' + user.hash);
+               
+               password(req.body.password).verifyAgainst(result.rows[0].password, function(error, verified) {
                    if(error) {
-                       //TODO handle error
+                       res.statusCode = 500;
+                       return res.send('Error 500: An internal servor error has occured.');
                    }
                    if(!verified) {
                        res.statusCode = 401;

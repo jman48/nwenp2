@@ -1,5 +1,5 @@
 var pg = require('pg').native,
-    connectionString = process.env.DATABASE_URL,
+    connectionString = 'postgres://ecnbtqsyugvdxf:dxUfMx9EGB1n35Wrw30aplM7ml@ec2-107-20-152-139.compute-1.amazonaws.com:5432/d5ocpahj31f72f',
     client,
     query,
     hashPass = require('password-hash-and-salt');
@@ -15,7 +15,7 @@ drop.on('error', function(error) {
 });
 
 //Create a new quotes table
-query = client.query('CREATE TABLE users (user_name VARCHAR(50), password VARCHAR(3000))');
+query = client.query('CREATE TABLE users (user_name VARCHAR(120), password text, access_token text)');
 
 query.on('end', function(result) {
     createUser('User1', '1234', function() {

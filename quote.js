@@ -40,6 +40,7 @@ var validateToken = function(req, res, next) {
     var userExistQuery = client.query("SELECT * FROM users WHERE user_name = $1", [decoded.user]);
     
     userExistQuery.on('end', function(result) {
+        //Check that the user in the token exists
         if(result.rows[0].length < 1) {
             return res.send('Error 404: User for this token does not exist', 404);
         } else {                       
@@ -61,6 +62,7 @@ var validateToken = function(req, res, next) {
 
 app.post('/api/*', validateToken);
 
+//Log in the user
 app.post('auth/login', function(req, res) {
     if(!req.body.hasOwnProperty('user') || !req.body.hasOwnProperty('password')) {
         res.statusCode = 400;
@@ -130,16 +132,19 @@ app.post('auth/login', function(req, res) {
     });
 });
 
+//Log the user out
 app.post('auth/logout', [validateToken], function(req, res) {
-    var oldTokenVersion = tokenVersion;
-    tokenVersion = Math.random();
+    //Token should already be checked and verified by the validateToken function
     
-    //Make sure the new token version is different
-    while(oldTokenVersion !== tokenVersion) {
-        tokenVersion = Math.random();
-    }
+    var decoded = jwt.decode(req.body.access_token, app.get('jwtTokenSecret')); //Decode the token
     
-    res.send('Successfully logged out', 200);
+    var logoutUserQuery = client.query('INSERT INTO users (access_token) VALUES($1) WHERE user_name = $2', ['', decoded.user]);
+    
+    logoutUserQuery.on('end', function(result) {
+        res.send('Successfully logged out', 200);
+    });
+    
+    handleError(logoutUserQuery, client, res);
 });
 
 //Get all quotes from the database

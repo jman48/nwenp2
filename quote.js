@@ -27,14 +27,18 @@ client.connect();
 //A function to validate a token from a request
 var validateToken = function(req, res, next) {
     if(!req.body.hasOwnProperty('access_token')) {
-        return res.send('Error 403: You are missing an access token. Log in again to get one', 403);
+        res.statusCode = 400;
+        return res.send('Error 400: You are missing an access token. Log in to get one');
     }
     
     var decoded = jwt.decode(req.body.access_token, app.get('jwtTokenSecret')); //Decode the token
     
     if(decoded.exp <= Date.now()) {
+        res.statusCode = 403;
         return res.end('Error 403: Access token has expired', 403);
     }
+    
+    client.connect();
     
     //Check the user exists
     var userExistQuery = client.query("SELECT * FROM users WHERE user_name = $1", [decoded.user]);
@@ -42,6 +46,7 @@ var validateToken = function(req, res, next) {
     userExistQuery.on('end', function(result) {
         //Check that the user in the token exists
         if(result.rows[0].length < 1) {
+            res.statusCode = 404;
             return res.send('Error 404: User for this token does not exist', 404);
         } else {                       
             //Check the provided token is the same as the stored one.
@@ -49,21 +54,25 @@ var validateToken = function(req, res, next) {
                 //Do not need to check the expiry date of the stored token because it should be the same as the provided one. If not authentication will fail.
                 next(); //Everything is ok with access token so run request
             } else {
+                client.end();
+                res.statusCode = 403;
                 return res.end('Error 403: The provided token is inccorect. Try login again', 403);
             }  
         }
     });
     
     userExistQuery.on('error', function(error) {
+       client.end();
        console.log('Error: ' + error);
-       res.send('Error 500: An internal server error has occured', 500);
+        res.statusCode = 500;
+       res.send('Error 500: An internal server error has occured');
     });
 }
 
 app.post('/api/*', validateToken);
 
 //Log in the user
-app.post('auth/login', function(req, res) {
+app.post('/auth/login', function(req, res) {
     if(!req.body.hasOwnProperty('user') || !req.body.hasOwnProperty('password')) {
         res.statusCode = 400;
         return res.send('Error 400: Post syntax incorrect.');
@@ -76,6 +85,7 @@ app.post('auth/login', function(req, res) {
         res.statusCode = 400;
         return res.send('Error 400: Username is empty.');
     }
+    
     var user = [];
     var hash = password(req.body.password).hash(function(error, hash) {
         if(error) {
@@ -106,12 +116,12 @@ app.post('auth/login', function(req, res) {
                             user: req.body.user,
                             exp: expires
                         }, app.get('jwtTokenSecret'));
-                        
                         //Store token in database so we can log the user out at a future date
-                        var storeTokenQuery = client.query('INSERT INTO users (access_token) VALUES($1) WHERE user_name = $2', [req.body.user, token]);
+                        var storeTokenQuery = client.query('UPDATE users SET access_token = $1 WHERE user_name = $2', [token, req.body.user]);
                         
                         storeTokenQuery.on('end', function(result) {
                             //Everything is ok so send access token to user
+                            res.statusCode = 200;
                             res.json({
                                 token: token,
                                 expires: expires,
@@ -133,15 +143,16 @@ app.post('auth/login', function(req, res) {
 });
 
 //Log the user out
-app.post('auth/logout', [validateToken], function(req, res) {
+app.post('/auth/logout', [validateToken], function(req, res) {
     //Token should already be checked and verified by the validateToken function
     
     var decoded = jwt.decode(req.body.access_token, app.get('jwtTokenSecret')); //Decode the token
     
-    var logoutUserQuery = client.query('INSERT INTO users (access_token) VALUES($1) WHERE user_name = $2', ['', decoded.user]);
+    var logoutUserQuery = client.query('UPDATE users SET access_token = $1 WHERE user_name = $2', ['', decoded.user]);
     
     logoutUserQuery.on('end', function(result) {
-        res.send('Successfully logged out', 200);
+        res.statusCode = 200;
+        res.send('Successfully logged out');
     });
     
     handleError(logoutUserQuery, client, res);

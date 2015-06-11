@@ -61,15 +61,14 @@ var validateToken = function(req, res, next) {
         }
     });
     
-    userExistQuery.on('error', function(error) {
-       client.end();
-       console.log('Error: ' + error);
-        res.statusCode = 500;
-       res.send('Error 500: An internal server error has occured');
-    });
+    handleError(userExistQuery, client, res);
 }
 
+//Make sure that every call to any path that can change data is verified
 app.post('/api/*', validateToken);
+app.delete('/api/*', validateToken);
+app.put('/api/*', validateToken);
+app.get('/api/*', validateToken);
 
 //Log in the user
 app.post('/auth/login', function(req, res) {
@@ -139,6 +138,8 @@ app.post('/auth/login', function(req, res) {
                 res.send('Error 404: User not found');
             }
         });
+        
+        handleError(query, client, res);
     });
 });
 
@@ -171,6 +172,7 @@ app.get('/api/quote/all', function(req, res) {
     });
     handleError(query, client, res);
 });
+
 //Get a random quote from the database.
 app.get('/api/quote/random', function(req, res) {
     client.connect();
@@ -185,6 +187,7 @@ app.get('/api/quote/random', function(req, res) {
     });
     handleError(query, client, res);
 });
+
 //Get a quote from the database based on the id passed
 app.get('/api/quote/:id', function(req, res) {
     if(sanitize(req.params, res)) {
@@ -254,6 +257,7 @@ app.delete('/api/quote/:id', function(req, res) {
     });
     handleError(query, client, res);
 });
+
 // use PORT set as an environment variable
 var server = app.listen(process.env.PORT, function() {
     console.log('Listening on port %d', server.address().port);

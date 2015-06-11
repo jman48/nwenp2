@@ -52,7 +52,7 @@ app.get('/quote/random', function (req, res) {
             return res.send('Error 404: No quotes available to get');
         }
 
-        //Get a random number that will be an in the array index of quotes.
+        //Get a random number that will be in the one of the quotes.
         var rand = Math.floor(Math.random() * result.rows.length);
         res.send(result.rows[rand]);
     });
@@ -154,13 +154,15 @@ var server = app.listen(process.env.PORT, function () {
 });
 
 /**
- * Handle a postgressql query error. All error from querys are considered 500 errors.
- * This is because we do not know what the error may be and should not send the
+ * Handle a postgressql query error. All errors from query's are considered 500 errors.
+ * This is because we do not know what the error may be and should not send the error to
+ *  the user as it shows internal workings of the server (because we do not know what the module will say).
  */
 function handleError(errQuery, errClient, res) {
     errQuery.on('error', function (error) {
         errClient.end();
-        console.log('Unknown Error: ' + JSON.stringify(error));
+        console.log('Error: ' + JSON.stringify(error));
+
         res.statusCode = 500;
         res.send('Error 500: An unknown internal server error has occurred');
     });
@@ -173,7 +175,7 @@ function handleError(errQuery, errClient, res) {
  *
  * @params - This is the object that should have the 'id' field. i.e req.params or req.body
  */
-function sanitize(params, res, dbClient) {
+function sanitize(params, res) {
     if (!params.hasOwnProperty('id')) {
         client.end();
         res.statusCode = 400;
